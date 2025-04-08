@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --primary-color: #5e43d8;
+  --background-color: #f8f5ff;
+}
+
+body {
+  background-color: var(--background-color);
+}
