@@ -1,6 +1,7 @@
 import { Program } from "@coral-xyz/anchor";
 import { Xcity } from '../target/types/xcity';
 import { sha256 } from 'js-sha256';
+import os from "os";
 import { 
     Connection, 
     Keypair, 
@@ -11,10 +12,13 @@ import * as anchor from "@coral-xyz/anchor";
 import { initializeKeypair, makeKeypairs } from "@solana-developers/helpers";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, ExtensionType, getAssociatedTokenAddress, getMintLen, LENGTH_SIZE, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TYPE_SIZE } from "@solana/spl-token";
 import { encryptMessage, decryptMessage } from "./utils/crypt";
+import { readFileSync } from "fs";
+import path from "path";
 
-const KEYPAIR_FILE_PATH = '~/my-keypair.json';
+const KEYPAIR_FILE_FILE = 'my-keypair.json';
 const endpoint = "http://127.0.0.1:8899";
 const wsEndpoint = "ws://127.0.0.1:8900";
+
 const connection = new Connection(endpoint, {wsEndpoint: wsEndpoint, commitment: 'finalized'});
 
 
@@ -36,7 +40,8 @@ describe("xcity", () => {
     //   });
 
     before(async () => {
-        const keypair = await initializeKeypair(connection, {keypairPath: KEYPAIR_FILE_PATH, airdropAmount: 1});
+        const keypairData = JSON.parse(readFileSync(path.join(os.homedir(), KEYPAIR_FILE_FILE), "utf8"));
+        const keypair = Keypair.fromSecretKey(Uint8Array.from(keypairData));
         console.log(`keypair**=====: ${keypair.publicKey.toBase58()}\n`);
         wallet = new anchor.Wallet(keypair);
         payer = wallet.payer;
@@ -79,8 +84,9 @@ describe("xcity", () => {
         let rewardMintAuthority: PublicKey;
 
         const idInfo = await connection.getAccountInfo(idKey);
+        console.log(`xcityKey=====: ${xcityKey.toBase58()}\n`);
         // console.log(xcityInfo);
-
+        const xcityAcct = await program.account.xcity.fetch(xcityKey);
         if (idInfo) {
             console.log(`idKey=====: ${idKey.toBase58()}\n`);
             const identityAcct = await program.account.identity.fetch(idKey);
@@ -100,7 +106,7 @@ describe("xcity", () => {
         }
 
       
-        const xcityAcct = await program.account.xcity.fetch(xcityKey);
+     
         rewardMintToken = xcityAcct.rewardMintToken;
         kycMintAuthority = xcityAcct.kycMintAuthority;
         resumeMintAuthority = xcityAcct.resumeMintAuthority;

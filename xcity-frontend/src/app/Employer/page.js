@@ -2,6 +2,17 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { 
+  Connection, 
+  PublicKey, 
+  Keypair,
+  SystemProgram
+  } 
+  from '@solana/web3.js';
+  import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+  import * as anchor from "@coral-xyz/anchor";
+  import { Xcity } from '../../target/types/xcity';
+  import { Program } from "@coral-xyz/anchor";
 
 const page = () => {
   const [formData, setFormData] = useState({
@@ -23,10 +34,77 @@ const page = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("提交的职位数据:", formData);
+    handlePostJob(formData.jobHash, formData.jobUrl);
     // 和合约函数交互，将企业数据上传
     // 上传成功后跳转认证页，页面有多个候选人列表，每一个候选人都有确认和拒绝两个按钮
     router.push("./Verify");
   };
+
+  const handlePostJob = async (jdHash, jdUrl) => {
+    const XCITY_SEED = "xcity";
+    const IDENTITY_SEED = "identity";
+    const JOB_DESCRIPTION_SEED = "job_description";
+
+    const { publicKey, wallet } = useWallet();
+    const { connection } = useConnection();
+    const keypair =  Keypair.generate();
+
+    const provider = new anchor.AnchorProvider(connection, wallet, {
+        commitment: 'finalized'
+    });
+    anchor.setProvider(provider);
+    const program = anchor.workspace.Xcity as Program<Xcity>;
+
+    const idKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(IDENTITY_SEED), publicKey.toBuffer()],
+        program.programId
+    )[0];
+
+    const xcityKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(XCITY_SEED)],
+        program.programId
+    )[0];
+
+
+
+    const idInfo = await connection.getAccountInfo(idKey);
+
+    if (!idInfo) {
+      
+        return;
+    }
+
+    const xcityAcct = await program.account.xcity.fetch(xcityKey);
+
+    const identityAcct = await program.account.identity.fetch(idKey);
+    console.log(`identityAcct: ${JSON.stringify(identityAcct)}`);
+
+    const orderId = (identityAcct.publishNum + 1).toString();
+
+    const jdKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(JOB_DESCRIPTION_SEED), Buffer.from(orderId), publicKey.toBuffer()],
+        program.programId
+    )[0];
+
+    await program.methods.createJobDescription(jdHash, jdUrl)
+        .accounts({
+            payer: publicKey,
+            identity: idKey,
+            xcity: xcityKey,
+            jobDescription: jdKey,
+            rewardMintToken: xcityAcct.rewardMintToken,
+            rewardTokenAccount: identityAcct.rewardTokenAccount,
+            rewardMintAuthority: xcityAcct.rewardMintAuthority,
+            tokenProgram: TOKEN_2022_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+
+
+
+  }
+
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-sm p-8">

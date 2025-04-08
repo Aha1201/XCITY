@@ -1,6 +1,17 @@
 "use client";
 import { useWallet } from "@solana/wallet-adapter-react";
 import React from "react";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import * as anchor from "@coral-xyz/anchor";
+import { Xcity } from '../../target/types/xcity';
+import { Program } from "@coral-xyz/anchor";
+import { 
+  Connection, 
+  PublicKey, 
+  Keypair,
+  SystemProgram
+  } 
+  from '@solana/web3.js';
 
 const page = () => {
   const { publicKey } = useWallet();
@@ -20,10 +31,94 @@ const page = () => {
   ];
 
   // 点击确认触发，传入对应id
-  const handleConfirm = (id) => {};
+  const handleConfirm = (id) => {
+    handleVerify(id);
+  };
 
   // 点击拒绝触发，传入对应id
-  const handleRefuse = (id) => {};
+  const handleRefuse = (id) => {
+    handleVerify(id);
+  };
+
+  const handleVerify = async (id) => {
+
+    const XCITY_SEED = "xcity";
+    const IDENTITY_SEED = "identity";
+    const ROLE_SEED = "role";
+    const talentPubKey = new PublicKey("4JQHcHj7FSmyQ8NzNzVt2RqPDnaQxNLu6tSNb3Bormeh");
+
+    const { publicKey, wallet } = useWallet();
+    const { connection } = useConnection();
+    const keypair =  Keypair.generate();
+
+    const provider = new anchor.AnchorProvider(connection, wallet, {
+        commitment: 'finalized'
+    });
+    anchor.setProvider(provider);
+    const program = anchor.workspace.Xcity as Program<Xcity>;
+
+    const idKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(IDENTITY_SEED), publicKey.toBuffer()],
+        program.programId
+    )[0];
+
+
+       const xcityKey = PublicKey.findProgramAddressSync(
+            [Buffer.from(XCITY_SEED)],
+            program.programId
+        )[0];
+
+
+        const idInfo = await connection.getAccountInfo(idKey);
+
+        if (!idInfo) {
+            console.log(`idInfo not found`);
+            return;
+        }
+
+        const identityAcct = await program.account.identity.fetch(idKey);
+        console.log(`identityAcct: ${JSON.stringify(identityAcct)}`);
+
+        const orderId = (identityAcct.publishNum).toString();
+        const roleKey = PublicKey.findProgramAddressSync(
+            [Buffer.from(ROLE_SEED), Buffer.from(orderId), publicKey.toBuffer()],
+            program.programId
+        )[0];
+        console.log(`roleKey: ${roleKey.toBase58()}`);
+
+
+        const xcityAcct = await program.account.xcity.fetch(xcityKey);
+  
+        const verifierIdKey = PublicKey.findProgramAddressSync(
+            [Buffer.from(IDENTITY_SEED), publicKey.toBuffer()],
+            program.programId
+        )[0];
+        console.log(`verifierIdKey: ${verifierIdKey.toBase58()}`);
+        const verifierIdentityAcct = await program.account.identity.fetch(verifierIdKey);
+        console.log(`verifierIdentityAcct: ${JSON.stringify(verifierIdentityAcct)}`);
+
+
+        await program.methods.verifyRole(id)
+            .accounts({
+                payer: payer.publicKey,
+                identity: idKey,
+                xcity: xcityKey,
+                role: roleKey,
+                talent: talentPubKey,
+                resumeMintToken: identityAcct.resumeMintToken,
+                resumeMintAuthority: xcityAcct.resumeMintAuthority,
+                rewardMintToken: xcityAcct.rewardMintToken,
+                rewardTokenAccount: identityAcct.rewardTokenAccount,
+                verifierRewardTokenAccount: verifierIdentityAcct.rewardTokenAccount,
+                rewardMintAuthority: xcityAcct.rewardMintAuthority,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                token2022Program: TOKEN_2022_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            })
+            .rpc();
+
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

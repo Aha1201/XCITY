@@ -2,7 +2,7 @@
 
 import FeatureCard from "../components/FeatureCard";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 
 const Home = () => {

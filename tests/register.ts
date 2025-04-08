@@ -1,5 +1,7 @@
 import { Program } from "@coral-xyz/anchor";
 import { Xcity } from '../target/types/xcity';
+import { readFileSync } from "fs";
+import os from "os";
 import { 
     Connection, 
     Keypair, 
@@ -12,10 +14,12 @@ import * as anchor from "@coral-xyz/anchor";
 import { initializeKeypair, makeKeypairs } from "@solana-developers/helpers";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, ExtensionType, getAssociatedTokenAddress, getMintLen, LENGTH_SIZE, TOKEN_2022_PROGRAM_ID, TYPE_SIZE } from "@solana/spl-token";
 import { pack, TokenMetadata } from "@solana/spl-token-metadata";
+import path from "path";
 
-const KEYPAIR_FILE_PATH = '~/my-keypair.json';
+const KEYPAIR_FILE_FILE = 'my-keypair.json';
 const endpoint = "http://127.0.0.1:8899";
 const wsEndpoint = "ws://127.0.0.1:8900";
+
 const connection = new Connection(endpoint, {wsEndpoint: wsEndpoint, commitment: 'finalized'});
 
 describe("xcity", () => {
@@ -35,8 +39,10 @@ describe("xcity", () => {
     //   });
 
     before(async () => {
-        const keypair = await initializeKeypair(connection, {keypairPath: KEYPAIR_FILE_PATH, airdropAmount: 1});
-        console.log(`keypair**=====: ${keypair.publicKey.toBase58()}\n`);
+        //const keypair = await initializeKeypair(connection, {keypairPath: KEYPAIR_FILE_PATH, airdropAmount: 1});
+        const keypairData = JSON.parse(readFileSync(path.join(os.homedir(), KEYPAIR_FILE_FILE), "utf8"));
+        const keypair = Keypair.fromSecretKey(Uint8Array.from(keypairData));
+        
         wallet = new anchor.Wallet(keypair);
         payer = wallet.payer;
         provider = new anchor.AnchorProvider(connection, wallet, {

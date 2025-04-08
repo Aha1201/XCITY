@@ -20,10 +20,14 @@ import { pack, TokenMetadata } from "@solana/spl-token-metadata";
 import fs from 'fs/promises';
 import { initializeKeypair } from "@solana-developers/helpers";
 import { encryptMessage, decryptMessage, signCustomMessage } from "./utils/crypt";
-
-const KEYPAIR_FILE_PATH = '~/my-keypair.json';
+import { delay } from "./utils/tools";
+import { readFileSync } from "fs";
+import path from "path";
+import os from "os";
+const KEYPAIR_FILE_FILE = 'my-keypair.json';
 const endpoint = "http://127.0.0.1:8899";
 const wsEndpoint = "ws://127.0.0.1:8900";
+
 const connection = new Connection(endpoint, {wsEndpoint: wsEndpoint, commitment: 'finalized'});
 
 describe("xcity", () => {
@@ -43,7 +47,8 @@ describe("xcity", () => {
     //   });
 
     before(async () => {
-        const keypair = await initializeKeypair(connection, {keypairPath: KEYPAIR_FILE_PATH, airdropAmount: 1});
+        const keypairData = JSON.parse(readFileSync(path.join(os.homedir(), KEYPAIR_FILE_FILE), "utf8"));
+        const keypair = Keypair.fromSecretKey(Uint8Array.from(keypairData));
         console.log(`keypair**=====: ${keypair.publicKey.toBase58()}\n`);
         wallet = new anchor.Wallet(keypair);
         payer = wallet.payer;
@@ -83,10 +88,10 @@ describe("xcity", () => {
             console.log(`idInfo not found`);
             return;
         }
-
+        await delay(1000);
         const identityAcct = await program.account.identity.fetch(idKey);
         console.log(`identityAcct: ${JSON.stringify(identityAcct)}`);
-
+        await delay(1000);
         const orderId = (identityAcct.publishNum).toString();
         const roleKey = PublicKey.findProgramAddressSync(
             [Buffer.from(ROLE_SEED), Buffer.from(orderId), talentPubKey.toBuffer()],
@@ -96,7 +101,7 @@ describe("xcity", () => {
 
 
         const xcityAcct = await program.account.xcity.fetch(xcityKey);
-
+        await delay(1000);
         const verifierIdKey = PublicKey.findProgramAddressSync(
             [Buffer.from(IDENTITY_SEED), payer.publicKey.toBuffer()],
             program.programId
@@ -131,7 +136,7 @@ describe("xcity", () => {
                 systemProgram: SystemProgram.programId,
             })
             .rpc();
-
+            await delay(1000);
         const roleInfo = await program.account.role.fetch(roleKey);
         console.log(`roleInfo: ${JSON.stringify(roleInfo)}`);
     });

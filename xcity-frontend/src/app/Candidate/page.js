@@ -11,6 +11,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { 
+  Connection, 
+  PublicKey, 
+  Keypair,
+  SystemProgram
+  } 
+  from '@solana/web3.js';
+  import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+  import * as anchor from "@coral-xyz/anchor";
+  import { Xcity } from '../../target/types/xcity';
+  import { Program } from "@coral-xyz/anchor";
 
 const page = () => {
   const [formData, setFormData] = useState({
@@ -42,6 +53,70 @@ const page = () => {
     console.log("提交的表单数据:", formData);
     // 和合约函数交互，将候选人的数据上传
     // 上传成功后跳转首页
+    handleCreateRole(formData.date, formData.companyAddress);
+
+  };
+
+  const handleCreateRole = async (dateStr, companyAddress) => {
+    const IDENTITY_SEED = "identity";
+    const ROLE_SEED = "role";
+    const { publicKey, wallet } = useWallet();
+    const { connection } = useConnection();
+    const keypair =  Keypair.generate();
+
+    const provider = new anchor.AnchorProvider(connection, wallet, {
+        commitment: 'finalized'
+    });
+    anchor.setProvider(provider);
+    const program = anchor.workspace.Xcity as Program<Xcity>;
+
+    const idKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(IDENTITY_SEED), publicKey.toBuffer()],
+        program.programId
+    )[0];
+
+    const idInfo = await connection.getAccountInfo(idKey);
+    
+    if (!idInfo) {
+        console.log(`idInfo not found`);
+        return;
+    }
+
+    const identityAcct = await program.account.identity.fetch(idKey);
+
+    const old_encryptionId = identityAcct.encryptionId;
+
+    const decryptedMessage = decryptMessage(Buffer.from(old_encryptionId, "base64"), 
+    keypair.publicKey.toBytes(), 
+    keypair.secretKey.slice(0, 32));
+
+    const encryptedMessage = encryptMessage(decryptedMessage, 
+      keypair.secretKey.slice(0, 32),
+        verifier.publicKey.toBytes());
+    const encryptionId = Buffer.from(encryptedMessage).toString("base64");
+
+
+    const orderId = (identityAcct.publishNum + 1).toString();
+    const roleKey = PublicKey.findProgramAddressSync(
+        [Buffer.from(ROLE_SEED), Buffer.from(orderId), keypair.publicKey.toBuffer()],
+        program.programId
+    )[0];
+
+    const info = dateStr + " " + companyAddress;
+
+    await program.methods.createRole(encryptionId, info)
+        .accounts({
+            payer: publicKey,
+            verifier: verifier.publicKey,
+            identity: idKey,
+            role: roleKey,
+            systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    const newIdentityAcct = await program.account.identity.fetch(idKey);
+    const newOderId = newIdentityAcct.publishNum.toString();
+
+    const roleInfo = await program.account.role.fetch(roleKey);
   };
 
   return (

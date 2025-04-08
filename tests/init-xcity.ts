@@ -14,7 +14,6 @@ import { assert } from 'chai';
 dotenv.config();
 
 
-
 const endpoint = "http://127.0.0.1:8899";
 const wsEndpoint = "ws://127.0.0.1:8900";
 const connection = new Connection(endpoint, {wsEndpoint: wsEndpoint, commitment: 'finalized'});

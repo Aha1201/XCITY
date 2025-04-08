@@ -1,6 +1,7 @@
 
 import { Program } from "@coral-xyz/anchor";
 import { Xcity } from '../target/types/xcity';
+
 import { 
     Connection, 
     PublicKey, 
@@ -12,10 +13,12 @@ import * as anchor from "@coral-xyz/anchor";
 import { makeKeypairs } from "@solana-developers/helpers";
 import { initializeKeypair } from "@solana-developers/helpers";
 import { encryptMessage, decryptMessage, signCustomMessage } from "./utils/crypt";
+import { delay } from "./utils/tools";
 
 const KEYPAIR_FILE_PATH = '~/my-keypair.json';
 const endpoint = "http://127.0.0.1:8899";
 const wsEndpoint = "ws://127.0.0.1:8900";
+
 const connection = new Connection(endpoint, {wsEndpoint: wsEndpoint, commitment: 'finalized'});
 
 describe("xcity", () => {
@@ -69,7 +72,7 @@ describe("xcity", () => {
         console.log(`idKey: ${idKey.toBase58()}`);
 
         const idInfo = await connection.getAccountInfo(idKey);
-
+        await delay(1000);
         if (!idInfo) {
             console.log(`idInfo not found`);
             return;
@@ -80,6 +83,7 @@ describe("xcity", () => {
 
         const old_encryptionId = identityAcct.encryptionId;
         console.log(`old_encryptionId: ${old_encryptionId}`);
+        await delay(1000);
 
         const decryptedMessage = decryptMessage(Buffer.from(old_encryptionId, "base64"), 
         payer.publicKey.toBytes(), 
@@ -119,7 +123,7 @@ describe("xcity", () => {
         const newIdentityAcct = await program.account.identity.fetch(idKey);
         const newOderId = newIdentityAcct.publishNum.toString();
         console.log(`newOderId: ${newOderId}`);
-
+        await delay(1000);
         const roleInfo = await program.account.role.fetch(roleKey);
         console.log(`roleInfo: ${JSON.stringify(roleInfo)}`);
     });

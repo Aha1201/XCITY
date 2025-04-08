@@ -13,7 +13,7 @@
     "@solana/web3.js": "^1.91.2",
     "@typescript-eslint/parser": "^6.20.0",
     "arweave": "^1.10.0",
-    "bs58": "^5.0.0",
+    "bs58": "^6.0.0",
     "dotenv": "^16.0.0",
     "eslint": "^8.56.0",
     "esrun": "^3.2.26",
