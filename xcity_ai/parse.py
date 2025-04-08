@@ -109,6 +109,7 @@ def main(in_folder_path: str, out_folder_path: str):
     load_dotenv()
 
     dataset = {
+        "resume": {},
         "job_title": {},
         "work_years": {},
         "skills": {},
@@ -119,6 +120,7 @@ def main(in_folder_path: str, out_folder_path: str):
         if filename.endswith(".docx"):
             file_path = os.path.join(in_folder_path, filename)
             content = read_docx(file_path)
+            dataset["resume"][filename] = content
             organized_content = organize_content(content)
             data = load_data(organized_content)
             if not data:
