@@ -10,7 +10,7 @@ pub fn handler(ctx: Context<CreateJobDescription>, jd_hash: String, jd_url: Stri
     let identity = &mut ctx.accounts.identity;
     identity.publish_num += 1;
 
-    job_description.owner = payer.key();
+    job_description.owner = ctx.accounts.payer.key();
     job_description.order_id = identity.publish_num;
     job_description.jd_hash = jd_hash;
     job_description.jd_url = jd_url;
